@@ -3,13 +3,13 @@ const NEWS_URL = "https://news.zhibo8.com/";
 const MOBILE_LINK_TEXT = "手机看直播";
 const PINNED_CATEGORY_KEY = "zhibo8PinnedCategoryV1";
 const CATEGORIES = [
-  { id: "all", label: "全部", icon: "▦" },
-  { id: "important", label: "重要", icon: "★" },
-  { id: "finished", label: "完赛", icon: "✓" },
+  { id: "all", label: "全部", icon: "" },
+  { id: "important", label: "已关注", icon: "" },
+  { id: "finished", label: "已完赛", icon: "" },
   { id: "football", label: "足球", icon: "⚽" },
-  { id: "basketball", label: "篮球", icon: "🏀" },
-  { id: "game", label: "电竞", icon: "🎮" },
-  { id: "other", label: "综合", icon: "◆" }
+  { id: "basketball", label: "篮球", icon: "" },
+  { id: "game", label: "电竞", icon: "" },
+  { id: "other", label: "综合", icon: "" }
 ];
 
 const state = {
@@ -567,7 +567,18 @@ function createScore(match) {
     const shouldOpen = !wrapper.classList.contains("is-open");
     document
       .querySelectorAll(".score-wrap.is-open")
-      .forEach((element) => element.classList.remove("is-open"));
+      .forEach((element) => {
+        element.classList.remove("is-open");
+        element
+          .querySelector(".score")
+          ?.setAttribute("aria-expanded", "false");
+      });
+    document.querySelectorAll(".match-more.is-open").forEach((element) => {
+      element.classList.remove("is-open");
+      element
+        .querySelector(".match-more__button")
+        ?.setAttribute("aria-expanded", "false");
+    });
     wrapper.classList.toggle("is-open", shouldOpen);
     button.setAttribute("aria-expanded", String(shouldOpen));
   });
@@ -575,13 +586,37 @@ function createScore(match) {
   return wrapper;
 }
 
+function displayLinkLabel(match, label, isLiveLink) {
+  if (isLiveLink) {
+    return "看直播";
+  }
+  if (label === "集锦") {
+    return "赛后集锦";
+  }
+  if (label === "录像") {
+    return "全场回放";
+  }
+  if (label === "战报" || (label === "文字" && match.liveState === "3")) {
+    return "文字战报";
+  }
+  if (label === "文字") {
+    return "文字直播";
+  }
+  return label;
+}
+
 function createMatchCard(match) {
   const card = createElement("article", "match-card");
-  card.append(createElement("time", "match-time", match.time));
+  card.classList.add(liveStatusClass(match));
 
   const main = createElement("div", "match-main");
   const meta = createElement("div", "match-meta");
-  meta.append(createElement("span", "league", match.league || "足球赛事"));
+  const metaInfo = createElement("div", "match-meta__info");
+  metaInfo.append(
+    createElement("time", "match-time", match.time),
+    createElement("span", "league", match.league || "足球赛事")
+  );
+  meta.append(metaInfo);
   if (match.liveStatus) {
     meta.append(
       createElement(
@@ -604,13 +639,65 @@ function createMatchCard(match) {
 
   if (match.links.length) {
     const links = createElement("div", "match-links");
-    for (const link of match.links) {
-      const anchor = createElement("a", "match-link", link.label);
+    const visibleLinks = match.links.slice(0, 2);
+    for (const [index, link] of visibleLinks.entries()) {
+      const isLiveLink =
+        match.liveState === "2" &&
+        (index === 0 || /直播|视频|观看/.test(link.label));
+      const anchor = createElement(
+        "a",
+        "match-link",
+        displayLinkLabel(match, link.label, isLiveLink)
+      );
+      anchor.classList.toggle("match-link--primary", isLiveLink);
+      if (isLiveLink) {
+        anchor.prepend(createElement("span", "match-link__play", "▶"));
+      }
       anchor.href = link.url;
       anchor.target = "_blank";
       anchor.rel = "noreferrer";
       anchor.title = link.label;
       links.append(anchor);
+    }
+
+    if (match.links.length > 2) {
+      const more = createElement("div", "match-more");
+      const moreButton = createElement("button", "match-more__button", "•••");
+      moreButton.type = "button";
+      moreButton.title = "更多直播入口";
+      moreButton.setAttribute("aria-label", "更多直播入口");
+      moreButton.setAttribute("aria-expanded", "false");
+      const menu = createElement("div", "match-more__menu");
+      for (const link of match.links.slice(2)) {
+        const anchor = createElement("a", "match-more__link", link.label);
+        anchor.href = link.url;
+        anchor.target = "_blank";
+        anchor.rel = "noreferrer";
+        anchor.title = link.label;
+        menu.append(anchor);
+      }
+      moreButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const shouldOpen = !more.classList.contains("is-open");
+        document
+          .querySelectorAll(".match-more.is-open")
+          .forEach((element) => {
+            element.classList.remove("is-open");
+            element
+              .querySelector(".match-more__button")
+              ?.setAttribute("aria-expanded", "false");
+          });
+        document.querySelectorAll(".score-wrap.is-open").forEach((element) => {
+          element.classList.remove("is-open");
+          element
+            .querySelector(".score")
+            ?.setAttribute("aria-expanded", "false");
+        });
+        more.classList.toggle("is-open", shouldOpen);
+        moreButton.setAttribute("aria-expanded", String(shouldOpen));
+      });
+      more.append(moreButton, menu);
+      links.append(more);
     }
     main.append(links);
   }
@@ -1070,6 +1157,12 @@ document.addEventListener("click", () => {
   document.querySelectorAll(".score-wrap.is-open").forEach((element) => {
     element.classList.remove("is-open");
     element.querySelector(".score")?.setAttribute("aria-expanded", "false");
+  });
+  document.querySelectorAll(".match-more.is-open").forEach((element) => {
+    element.classList.remove("is-open");
+    element
+      .querySelector(".match-more__button")
+      ?.setAttribute("aria-expanded", "false");
   });
 });
 
