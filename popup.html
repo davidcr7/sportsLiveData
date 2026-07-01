@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>直播吧赛事悬浮窗</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand__icon" src="icons/icon-48.png" alt="" />
+          <div>
+            <h1>直播吧赛程</h1>
+            <p><span class="live-dot"></span>直播吧实时赛事</p>
+          </div>
+        </div>
+        <button id="refreshButton" class="icon-button" type="button" aria-label="刷新赛事" title="刷新赛事">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 6v5h-5M4 18v-5h5M6.1 9a7 7 0 0 1 11.2-2.4L20 9M4 15l2.7 2.4A7 7 0 0 0 17.9 15" />
+          </svg>
+        </button>
+      </header>
+
+      <section class="category-bar">
+        <nav id="categoryTabs" class="category-tabs" aria-label="赛事分类"></nav>
+        <button
+          id="pinTabButton"
+          class="pin-button"
+          type="button"
+          aria-label="固定当前分类"
+          title="固定当前分类"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 4h8l-1 6 3 3v2H6v-2l3-3-1-6Zm4 11v5" />
+          </svg>
+        </button>
+      </section>
+
+      <nav id="dateTabs" class="date-tabs" aria-label="赛事日期" hidden></nav>
+
+      <section id="content" class="content" aria-live="polite">
+        <div class="loading-state" role="status">
+          <div class="spinner"></div>
+          <p>正在获取足球赛事…</p>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span id="updateStatus">正在连接直播吧</span>
+        <a href="https://www.zhibo8.com/" target="_blank" rel="noreferrer">打开直播吧</a>
+      </footer>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
