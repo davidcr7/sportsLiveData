@@ -279,8 +279,8 @@ function parseFinishedRecords(records) {
           liveState: "3",
           liveStatus: "完赛",
           hasLiveData: false,
-          homeGoals: [],
-          awayGoals: [],
+          homeEvents: [],
+          awayEvents: [],
           links: recordLinks(item)
         };
       })
@@ -305,7 +305,7 @@ function groupMatches(matches) {
   return groups;
 }
 
-function normalizeGoalEvents(items) {
+function normalizeMatchEvents(items) {
   if (!Array.isArray(items)) {
     return [];
   }
@@ -338,8 +338,8 @@ function applyLiveScores(matches, scores) {
       liveState: String(live.state || ""),
       liveStatus: cleanText(live.period_cn || live.period_state),
       hasLiveData: true,
-      homeGoals: normalizeGoalEvents(live.left?.player_data),
-      awayGoals: normalizeGoalEvents(live.right?.player_data)
+      homeEvents: normalizeMatchEvents(live.left?.player_data),
+      awayEvents: normalizeMatchEvents(live.right?.player_data)
     };
   });
 }
@@ -498,20 +498,48 @@ function createTeam(name, badge, side) {
   return team;
 }
 
-function createGoalColumn(teamName, goals, side) {
-  const column = createElement("div", `goal-column goal-column--${side}`);
-  column.append(createElement("div", "goal-column__team", teamName || "待定"));
+function eventDisplay(code) {
+  const displays = {
+    "1": { label: "进球", symbol: "⚽", className: "is-goal" },
+    "2": { label: "乌龙球", symbol: "↩", className: "is-own-goal" },
+    "4": { label: "两黄变红", symbol: "", className: "is-second-yellow" },
+    "5": { label: "红牌", symbol: "", className: "is-red-card" },
+    "6": { label: "点球", symbol: "⚽", className: "is-penalty" },
+    "36": { label: "失点", symbol: "×", className: "is-missed-penalty" }
+  };
+  return displays[String(code)] || {
+    label: "事件",
+    symbol: "•",
+    className: "is-other"
+  };
+}
 
-  const list = createElement("div", "goal-list");
-  if (!goals.length) {
-    list.append(createElement("div", "goal-empty", "暂无进球"));
+function createEventColumn(teamName, events, side) {
+  const column = createElement("div", `event-column event-column--${side}`);
+  column.append(createElement("div", "event-column__team", teamName || "待定"));
+
+  const list = createElement("div", "event-list");
+  if (!events.length) {
+    list.append(createElement("div", "event-empty", "暂无事件"));
   } else {
-    for (const goal of goals) {
-      const row = createElement("div", "goal-row");
+    for (const event of events) {
+      const display = eventDisplay(event.code);
+      const row = createElement("div", "event-row");
+      const icon = createElement(
+        "span",
+        `event-row__icon ${display.className}`,
+        display.symbol
+      );
+      icon.title = display.label;
       row.append(
-        createElement("span", "goal-row__time", goal.time || "—"),
-        createElement("span", "goal-row__ball", "⚽"),
-        createElement("span", "goal-row__player", goal.player || "未知球员")
+        createElement("span", "event-row__time", event.time || "—"),
+        icon,
+        createElement(
+          "span",
+          "event-row__player",
+          event.player || "未知球员"
+        ),
+        createElement("span", "event-row__type", display.label)
       );
       list.append(row);
     }
@@ -526,7 +554,7 @@ function createScoreDetails(match) {
 
   const header = createElement("div", "score-popover__header");
   header.append(
-    createElement("span", "", "进球详情"),
+    createElement("span", "", "比赛事件"),
     createElement(
       "span",
       `score-popover__status ${liveStatusClass(match)}`,
@@ -534,10 +562,10 @@ function createScoreDetails(match) {
     )
   );
 
-  const columns = createElement("div", "goal-columns");
+  const columns = createElement("div", "event-columns");
   columns.append(
-    createGoalColumn(match.home, match.homeGoals || [], "home"),
-    createGoalColumn(match.away, match.awayGoals || [], "away")
+    createEventColumn(match.home, match.homeEvents || [], "home"),
+    createEventColumn(match.away, match.awayEvents || [], "away")
   );
   popover.append(header, columns);
   return popover;
@@ -560,7 +588,7 @@ function createScore(match) {
   wrapper.classList.add(liveStatusClass(match));
   const button = createElement("button", "score score--interactive", match.score);
   button.type = "button";
-  button.title = "查看进球时间和进球人";
+  button.title = "查看进球、红牌等比赛事件";
   button.setAttribute("aria-expanded", "false");
   button.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -960,7 +988,9 @@ async function requestLiveScores() {
           },
           right: {
             score: "0",
-            player_data: []
+            player_data: [
+              { value: "90+5'", player_name: "因卡皮耶", code: "5" }
+            ]
           }
         },
         {

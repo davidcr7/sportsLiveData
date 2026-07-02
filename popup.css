@@ -66,8 +66,7 @@ button {
   align-items: center;
   justify-content: space-between;
   margin: 0 20px;
-  padding: 26px 0 19px;
-  border-bottom: 1px dashed #172b3d;
+  padding: 22px 0 16px;
 }
 
 .brand {
@@ -128,7 +127,7 @@ h1 {
   color: #75859a;
   background: #0d1d2d;
   border: 1px solid #1a2e42;
-  border-radius: 9px;
+  border-radius: 50%;
   cursor: pointer;
   transition:
     color 160ms ease,
@@ -176,8 +175,8 @@ h1 {
 
 .category-tabs {
   display: flex;
-  width: 100%;
   min-width: 0;
+  flex: 1 1 auto;
   justify-content: space-between;
   gap: 2px;
   overflow-x: auto;
@@ -253,49 +252,46 @@ h1 {
 }
 
 .pin-button {
-  position: absolute;
+  position: relative;
   z-index: 5;
-  top: 14px;
-  right: 5px;
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  margin-left: 6px;
   place-items: center;
   padding: 0;
-  color: #53647a;
-  background: #0d1d2d;
-  border: 1px solid #1a2e42;
-  border-radius: 6px;
+  color: #17263a;
+  background: var(--amber);
+  border: 1px solid var(--amber);
+  border-radius: 8px;
   cursor: pointer;
-  opacity: 0;
-  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgb(255 173 13 / 25%);
   transition:
-    opacity 150ms ease,
     color 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease,
     transform 150ms ease;
 }
 
-.category-bar:hover .pin-button,
-.pin-button:focus-visible,
-.pin-button.is-pinned {
-  opacity: 1;
-  transform: translateX(0);
+.pin-button:hover {
+  transform: scale(1.05);
 }
 
-.pin-button:hover,
 .pin-button.is-pinned {
   color: var(--amber);
-  border-color: rgb(255 173 13 / 35%);
+  background: #17263a;
+  border-color: rgb(255 173 13 / 55%);
 }
 
 .pin-button svg {
-  width: 11px;
-  height: 11px;
-  fill: none;
+  width: 13px;
+  height: 13px;
+  fill: currentcolor;
   stroke: currentcolor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.8;
+  stroke-width: 0.6;
 }
 
 .date-tabs {
@@ -417,12 +413,23 @@ h1 {
   overflow: visible;
   background: linear-gradient(145deg, #0e1e2e, #0c1b2a);
   border: 1px solid #1b3045;
-  border-radius: 10px;
+  border-radius: 14px;
   box-shadow: 0 8px 22px rgb(0 0 0 / 8%);
   transition:
     border-color 160ms ease,
     background 160ms ease,
     transform 160ms ease;
+}
+
+.match-card::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--amber);
+  border-radius: 14px 0 0 14px;
+  content: "";
 }
 
 .match-card:hover,
@@ -456,12 +463,12 @@ h1 {
 
 .match-time {
   flex: 0 0 auto;
-  color: #68778d;
+  color: var(--amber);
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  font-size: 9px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
-  font-weight: 750;
-  letter-spacing: 0.04em;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .league {
@@ -469,7 +476,7 @@ h1 {
   min-width: 0;
   overflow: hidden;
   color: #75849a;
-  font-size: 9px;
+  font-size: 10.5px;
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -481,7 +488,7 @@ h1 {
   align-items: center;
   gap: 5px;
   color: #66758a;
-  font-size: 9px;
+  font-size: 10.5px;
   font-variant-numeric: tabular-nums;
   font-weight: 750;
 }
@@ -523,9 +530,9 @@ h1 {
   min-width: 0;
   align-items: center;
   gap: 7px;
-  color: #d1d9e5;
-  font-size: 12px;
-  font-weight: 720;
+  color: #eaeff6;
+  font-size: 13.5px;
+  font-weight: 750;
 }
 
 .team--away {
@@ -550,14 +557,14 @@ h1 {
 }
 
 .score {
-  min-width: 53px;
+  min-width: 58px;
   padding: 0 3px;
   color: var(--amber);
   background: transparent;
   border: 0;
   border-radius: 0;
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  font-size: 23px;
+  font-size: 27px;
   font-variant-numeric: tabular-nums;
   font-weight: 850;
   letter-spacing: 0.02em;
@@ -671,22 +678,22 @@ h1 {
   font-weight: 650;
 }
 
-.goal-columns {
+.event-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
   padding: 10px 0 11px;
 }
 
-.goal-column {
+.event-column {
   min-width: 0;
   padding: 0 11px;
 }
 
-.goal-column + .goal-column {
+.event-column + .event-column {
   border-left: 1px solid #1b3045;
 }
 
-.goal-column__team {
+.event-column__team {
   overflow: hidden;
   margin-bottom: 7px;
   color: #8c9db4;
@@ -696,37 +703,85 @@ h1 {
   white-space: nowrap;
 }
 
-.goal-list {
+.event-list {
   display: grid;
   gap: 6px;
 }
 
-.goal-row {
+.event-row {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: auto 14px minmax(0, 1fr) auto;
   align-items: center;
   gap: 5px;
   color: #dce5f0;
   font-size: 9px;
 }
 
-.goal-row__time {
+.event-row__time {
   color: var(--amber);
   font-variant-numeric: tabular-nums;
   font-weight: 750;
 }
 
-.goal-row__ball {
+.event-row__icon {
+  display: inline-grid;
+  width: 14px;
+  height: 14px;
+  place-items: center;
   font-size: 8px;
+  line-height: 1;
 }
 
-.goal-row__player {
+.event-row__icon.is-own-goal {
+  color: #f5a742;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.event-row__icon.is-red-card {
+  width: 8px;
+  height: 12px;
+  justify-self: center;
+  background: #f04e4e;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 12%);
+}
+
+.event-row__icon.is-second-yellow {
+  width: 14px;
+  height: 12px;
+  background: linear-gradient(
+    90deg,
+    #f4c84a 0 43%,
+    transparent 43% 57%,
+    #f04e4e 57% 100%
+  );
+  border-radius: 1px;
+}
+
+.event-row__icon.is-missed-penalty {
+  width: 13px;
+  height: 13px;
+  color: #ff7b7b;
+  border: 1px solid currentcolor;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.event-row__player {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.goal-empty {
+.event-row__type {
+  color: #687a91;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.event-empty {
   color: #526278;
   font-size: 9px;
 }
@@ -748,7 +803,7 @@ h1 {
 .match-link {
   display: inline-flex;
   min-width: 0;
-  height: 34px;
+  height: 36px;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -757,9 +812,9 @@ h1 {
   color: #75849a;
   background: #112235;
   border: 1px solid #20364b;
-  border-radius: 7px;
-  font-size: 10px;
-  font-weight: 680;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
   text-decoration: none;
   text-overflow: ellipsis;
@@ -798,12 +853,12 @@ h1 {
 
 .match-more__button {
   width: 38px;
-  height: 34px;
+  height: 36px;
   padding: 0 0 4px;
   color: #53647a;
   background: #112235;
   border: 1px solid #20364b;
-  border-radius: 7px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 10px;
   letter-spacing: 0.14em;

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "直播吧赛事悬浮窗",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "点击浏览器工具栏图标，切换查看直播吧各类赛程、实时比分和直播入口。",
   "permissions": [
     "storage"
