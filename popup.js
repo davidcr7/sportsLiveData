@@ -3,13 +3,13 @@ const NEWS_URL = "https://news.zhibo8.com/";
 const MOBILE_LINK_TEXT = "手机看直播";
 const PINNED_CATEGORY_KEY = "zhibo8PinnedCategoryV1";
 const CATEGORIES = [
-  { id: "all", label: "全部", icon: "" },
-  { id: "important", label: "已关注", icon: "" },
-  { id: "finished", label: "已完赛", icon: "" },
-  { id: "football", label: "足球", icon: "⚽" },
-  { id: "basketball", label: "篮球", icon: "" },
-  { id: "game", label: "电竞", icon: "" },
-  { id: "other", label: "综合", icon: "" }
+  { id: "all", label: "全部" },
+  { id: "important", label: "已关注" },
+  { id: "finished", label: "已完赛" },
+  { id: "football", label: "足球" },
+  { id: "basketball", label: "篮球" },
+  { id: "game", label: "电竞" },
+  { id: "other", label: "综合" }
 ];
 
 const state = {
@@ -484,6 +484,22 @@ function createElement(tag, className, text) {
   return element;
 }
 
+function createPlayIcon(className) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  if (className) {
+    svg.setAttribute("class", className);
+  }
+  const path = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "path"
+  );
+  path.setAttribute("d", "M8 5v14l11-7z");
+  svg.append(path);
+  return svg;
+}
+
 function createTeam(name, badge, side) {
   const team = createElement("div", `team team--${side}`);
   if (badge) {
@@ -571,23 +587,41 @@ function createScoreDetails(match) {
   return popover;
 }
 
+function scoreParts(scoreText) {
+  const match = /^(\d+)\s*-\s*(\d+)$/.exec((scoreText || "").trim());
+  return match ? { home: match[1], away: match[2] } : null;
+}
+
+function fillScore(node, scoreText) {
+  const parts = scoreParts(scoreText);
+  if (parts) {
+    node.append(
+      createElement("span", "score__num", parts.home),
+      createElement("span", "score__dash", "–"),
+      createElement("span", "score__num", parts.away)
+    );
+  } else {
+    node.classList.add("is-upcoming");
+    node.append(createElement("span", "score__placeholder", "VS"));
+  }
+}
+
 function createScore(match) {
   if (
     match.dataType !== "football" ||
     !match.hasLiveData ||
     !/\d+\s*-\s*\d+/.test(match.score)
   ) {
-    const score = createElement("span", "score", match.score);
-    if (!/\d+\s*-\s*\d+/.test(match.score)) {
-      score.classList.add("is-upcoming");
-    }
+    const score = createElement("span", "score");
+    fillScore(score, match.score);
     return score;
   }
 
   const wrapper = createElement("div", "score-wrap");
   wrapper.classList.add(liveStatusClass(match));
-  const button = createElement("button", "score score--interactive", match.score);
+  const button = createElement("button", "score score--interactive");
   button.type = "button";
+  fillScore(button, match.score);
   button.title = "查看进球、红牌等比赛事件";
   button.setAttribute("aria-expanded", "false");
   button.addEventListener("click", (event) => {
@@ -679,7 +713,7 @@ function createMatchCard(match) {
       );
       anchor.classList.toggle("match-link--primary", isLiveLink);
       if (isLiveLink) {
-        anchor.prepend(createElement("span", "match-link__play", "▶"));
+        anchor.prepend(createPlayIcon("match-link__play"));
       }
       anchor.href = link.url;
       anchor.target = "_blank";
@@ -690,7 +724,7 @@ function createMatchCard(match) {
 
     if (match.links.length > 2) {
       const more = createElement("div", "match-more");
-      const moreButton = createElement("button", "match-more__button", "•••");
+      const moreButton = createElement("button", "match-more__button", "···");
       moreButton.type = "button";
       moreButton.title = "更多直播入口";
       moreButton.setAttribute("aria-label", "更多直播入口");
@@ -748,12 +782,9 @@ function renderCategoryTabs() {
       "aria-pressed",
       String(category.id === state.selectedCategory)
     );
-    button.append(
-      createElement("span", "category-tab__icon", category.icon),
-      createElement("span", "", category.label)
-    );
+    button.append(createElement("span", "", category.label));
     if (category.id === state.pinnedCategory) {
-      button.append(createElement("span", "category-tab__pin", "●"));
+      button.append(createElement("span", "category-tab__pin"));
       button.title = `${category.label}已固定为默认`;
     }
     button.addEventListener("click", () => selectCategory(category.id));
