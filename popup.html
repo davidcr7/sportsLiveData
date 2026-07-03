@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>直播吧赛程比分</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="header">
+    <div class="brand">
+      <span class="logo-dot"></span>
+      <span class="brand-name">直播吧 · 赛程比分</span>
+    </div>
+    <div class="header-actions">
+      <span id="updateTime" class="update-time"></span>
+      <button id="refreshBtn" class="refresh-btn" title="刷新数据">⟳</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <main id="list" class="list">
+    <div class="loading">正在加载赛程数据…</div>
+  </main>
+
+  <div id="tooltip" class="tooltip hidden"></div>
+
+  <footer class="footer">
+    <span>数据来源：zhibo8.com</span>
+    <span class="tip">悬浮比赛查看详情 · 点击 📌 固定Tab</span>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

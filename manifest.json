@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "直播吧赛程比分",
+  "version": "1.0.0",
+  "description": "嵌入直播吧(zhibo8.com)首页比赛直播数据，悬浮查看实时比分与进球详情，支持Tab切换与固定默认Tab",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "直播吧赛程比分",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.zhibo8.com/*",
+    "https://bifen4pc.qiumibao.com/*",
+    "https://bifen4pc2.qiumibao.com/*",
+    "https://s.qiumibao.com/*"
+  ]
+}

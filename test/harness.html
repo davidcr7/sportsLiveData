@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>popup 测试挂架</title>
+  <link rel="stylesheet" href="../popup.css">
+  <script>
+    // ---- 测试挂架：stub chrome API 与网络请求，用本地 fixture 数据 ----
+    window.chrome = {
+      storage: {
+        local: {
+          get _data() { return JSON.parse(localStorage.getItem('stub') || '{}'); },
+          async get(key) { return { [key]: this._data[key] }; },
+          async set(obj) { localStorage.setItem('stub', JSON.stringify({ ...this._data, ...obj })); },
+        },
+      },
+      tabs: { create: ({ url }) => window.open(url, '_blank') },
+    };
+
+    const realFetch = window.fetch.bind(window);
+    window.fetch = (url) => {
+      const u = String(url);
+      if (u.startsWith('https://www.zhibo8.com/')) return realFetch('fixtures/home.html');
+      if (u.includes('bifen4pc2.qiumibao.com/json/list.htm')) return realFetch('fixtures/list.json');
+      if (u.includes('bifen4pc.qiumibao.com/json/')) {
+        if (u.includes('/1867467.htm')) return realFetch('fixtures/detail_1867467.json');
+        return Promise.resolve(new Response('', { status: 404 }));
+      }
+      return realFetch(url);
+    };
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="brand">
+      <span class="logo-dot"></span>
+      <span class="brand-name">直播吧 · 赛程比分</span>
+    </div>
+    <div class="header-actions">
+      <span id="updateTime" class="update-time"></span>
+      <button id="refreshBtn" class="refresh-btn" title="刷新数据">⟳</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <main id="list" class="list">
+    <div class="loading">正在加载赛程数据…</div>
+  </main>
+
+  <div id="tooltip" class="tooltip hidden"></div>
+
+  <footer class="footer">
+    <span>数据来源：zhibo8.com</span>
+    <span class="tip">悬浮比赛查看详情 · 点击 📌 固定Tab</span>
+  </footer>
+
+  <script src="../popup.js"></script>
+</body>
+</html>
