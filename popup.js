@@ -25,7 +25,9 @@ const state = {
   scoreFetchedAt: null,
   fromCache: false,
   scoresFromCache: false,
-  loading: false
+  loading: false,
+  filterGroups: [],
+  activeFilter: null
 };
 
 const content = document.querySelector("#content");
@@ -34,6 +36,7 @@ const dateTabs = document.querySelector("#dateTabs");
 const pinTabButton = document.querySelector("#pinTabButton");
 const refreshButton = document.querySelector("#refreshButton");
 const updateStatus = document.querySelector("#updateStatus");
+const filterPanel = document.querySelector("#filterPanel");
 
 function cleanText(value) {
   return (value || "").replace(/\s+/g, " ").trim();
@@ -193,6 +196,38 @@ function parseScheduleDays(days) {
     );
 }
 
+const FILTER_GROUP_CATEGORY = {
+  足球: "football",
+  篮球: "basketball",
+  其他: "other"
+};
+
+function parseFilterValue(raw) {
+  return cleanText(raw)
+    .split(",")
+    .map(cleanText)
+    .filter(Boolean);
+}
+
+function parseFilterGroups(documentFromSite) {
+  return [...documentFromSite.querySelectorAll(".more-stype ._items")]
+    .map((item) => {
+      const label = cleanText(item.querySelector("._top span")?.textContent);
+      const chips = [...item.querySelectorAll("._list span")]
+        .map((span) => ({
+          label: cleanText(span.textContent),
+          keywords: parseFilterValue(span.getAttribute("value"))
+        }))
+        .filter((chip) => chip.label && chip.keywords.length);
+      return {
+        label,
+        categoryId: FILTER_GROUP_CATEGORY[label] || "all",
+        chips
+      };
+    })
+    .filter((group) => group.label && group.chips.length);
+}
+
 function parseSchedule(html) {
   const documentFromSite = new DOMParser().parseFromString(html, "text/html");
   const visibleMatches = [
@@ -208,7 +243,8 @@ function parseSchedule(html) {
     all: normalizedAll,
     important: importantMatches.length
       ? importantMatches
-      : uniqueMatches(visibleMatches)
+      : uniqueMatches(visibleMatches),
+    filterGroups: parseFilterGroups(documentFromSite)
   };
 }
 
@@ -393,8 +429,25 @@ function matchesForCategory(category) {
   return state.allMatches;
 }
 
+function matchesKeywords(match, keywords) {
+  const labelTokens = new Set(match.labels);
+  const freeText = `${match.league} ${match.home} ${match.away}`;
+  return keywords.some(
+    (keyword) => labelTokens.has(keyword) || freeText.includes(keyword)
+  );
+}
+
+function applyActiveFilter(matches) {
+  if (!state.activeFilter) {
+    return matches;
+  }
+  return matches.filter((match) =>
+    matchesKeywords(match, state.activeFilter.keywords)
+  );
+}
+
 function updateVisibleMatches() {
-  state.matches = matchesForCategory(state.selectedCategory);
+  state.matches = applyActiveFilter(matchesForCategory(state.selectedCategory));
   state.groups = groupMatches(state.matches);
   if (!state.groups.has(state.selectedDate)) {
     state.selectedDate = chooseDefaultDate();
@@ -497,6 +550,21 @@ function createPlayIcon(className) {
   );
   path.setAttribute("d", "M8 5v14l11-7z");
   svg.append(path);
+  return svg;
+}
+
+function createFilterIcon(className) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  if (className) {
+    svg.setAttribute("class", className);
+  }
+  for (const d of ["M4 6h16", "M7 12h10", "M10 18h4"]) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  }
   return svg;
 }
 
@@ -790,6 +858,114 @@ function renderCategoryTabs() {
     button.addEventListener("click", () => selectCategory(category.id));
     categoryTabs.append(button);
   }
+
+  const filterButton = createElement("button", "category-tab category-tab--filter");
+  filterButton.type = "button";
+  filterButton.setAttribute("aria-haspopup", "true");
+  filterButton.setAttribute("aria-expanded", String(!filterPanel.hidden));
+  filterButton.classList.toggle("is-active", Boolean(state.activeFilter));
+  filterButton.append(
+    createFilterIcon(),
+    createElement("span", "", state.activeFilter?.label || "筛选")
+  );
+  filterButton.title = state.activeFilter
+    ? `按「${state.activeFilter.label}」筛选中`
+    : "按联赛或球队筛选";
+  filterButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleFilterPanel();
+  });
+  categoryTabs.append(filterButton);
+}
+
+function closeFilterPanel() {
+  filterPanel.hidden = true;
+}
+
+function openFilterPanel() {
+  if (!state.filterGroups.length) {
+    return;
+  }
+  filterPanel.hidden = false;
+}
+
+function toggleFilterPanel() {
+  if (filterPanel.hidden) {
+    openFilterPanel();
+  } else {
+    closeFilterPanel();
+  }
+}
+
+function selectFilterChip(group, chip) {
+  state.selectedCategory = group.categoryId;
+  state.activeFilter = { label: chip.label, keywords: chip.keywords };
+  updateVisibleMatches();
+  renderCategoryTabs();
+  renderPinButton();
+  renderFilterPanel();
+  renderDateTabs();
+  renderMatches();
+  closeFilterPanel();
+}
+
+function clearActiveFilter() {
+  state.activeFilter = null;
+  updateVisibleMatches();
+  renderCategoryTabs();
+  renderFilterPanel();
+  renderDateTabs();
+  renderMatches();
+  closeFilterPanel();
+}
+
+function renderFilterPanel() {
+  const wasHidden = filterPanel.hidden;
+  filterPanel.replaceChildren();
+  filterPanel.hidden = wasHidden;
+
+  if (!state.filterGroups.length) {
+    return;
+  }
+
+  const header = createElement("div", "filter-panel__header");
+  const resetChip = createElement(
+    "button",
+    "filter-chip filter-chip--reset",
+    "全部赛事"
+  );
+  resetChip.type = "button";
+  resetChip.addEventListener("click", (event) => {
+    event.stopPropagation();
+    clearActiveFilter();
+  });
+  header.append(resetChip);
+  filterPanel.append(header);
+
+  const body = createElement("div", "filter-panel__body");
+  for (const group of state.filterGroups) {
+    const section = createElement("div", "filter-panel__group");
+    section.append(
+      createElement("div", "filter-panel__group-title", group.label)
+    );
+    const chipsWrap = createElement("div", "filter-panel__chips");
+    for (const chip of group.chips) {
+      const button = createElement("button", "filter-chip", chip.label);
+      button.type = "button";
+      button.classList.toggle(
+        "is-active",
+        state.activeFilter?.label === chip.label
+      );
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        selectFilterChip(group, chip);
+      });
+      chipsWrap.append(button);
+    }
+    section.append(chipsWrap);
+    body.append(section);
+  }
+  filterPanel.append(body);
 }
 
 function renderPinButton() {
@@ -815,11 +991,14 @@ function selectCategory(category) {
     return;
   }
   state.selectedCategory = category;
+  state.activeFilter = null;
   updateVisibleMatches();
   renderCategoryTabs();
   renderPinButton();
+  renderFilterPanel();
   renderDateTabs();
   renderMatches();
+  closeFilterPanel();
 }
 
 async function togglePinnedCategory() {
@@ -1117,6 +1296,9 @@ async function loadSchedule() {
     if (!schedule.all.length) {
       throw new Error("页面里暂时没有可显示的赛事");
     }
+    if (schedule.filterGroups.length) {
+      state.filterGroups = schedule.filterGroups;
+    }
     const fullyLoadedDates = new Set(
       (allScheduleResponse?.days || []).map((day) => day.date)
     );
@@ -1169,6 +1351,7 @@ async function loadSchedule() {
 
     renderCategoryTabs();
     renderPinButton();
+    renderFilterPanel();
     renderDateTabs();
     renderMatches();
     renderStatus();
@@ -1225,6 +1408,7 @@ document.addEventListener("click", () => {
       .querySelector(".match-more__button")
       ?.setAttribute("aria-expanded", "false");
   });
+  closeFilterPanel();
 });
 
 async function initialize() {
