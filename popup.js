@@ -3,6 +3,7 @@
 const HOME_URL = 'https://www.zhibo8.com/';
 const SCORE_LIST_URL = 'https://bifen4pc2.qiumibao.com/json/list.htm';
 const DETAIL_URL = (date, id) => `https://bifen4pc.qiumibao.com/json/${date}/${id}.htm`;
+const EVENT_URL = (date, id) => `https://dc4pc.qiumibao.com/dc/matchs/data/${date}/match_event_${id}.htm`;
 
 const TABS = [
   { key: 'all', name: '全部' },
@@ -19,8 +20,17 @@ const TYPE_NAMES = {
   game: '电竞',
 };
 
-// 进球/事件代码 → 图标
-const EVENT_ICONS = { 1: '⚽', 2: '⚽点球', 3: '⚽乌龙', 7: '🟥', 8: '🟨' };
+// player_data 的数字事件码（与 dc 接口 event_code 同一编码，经真实比赛交叉验证）
+const EVENT_CODE_ICONS = {
+  1: '⚽', 3: '🟨', 5: '🟥', 6: '⚽点球', 34: '⚽VAR', 35: '🟥VAR', 36: '失点',
+};
+// dc 事件接口的中文事件名 → 图标
+const EVENT_CN_ICONS = {
+  '进球': '⚽', '点球': '⚽点球', '乌龙球': '⚽乌龙', '红牌': '🟥',
+  '黄牌2': '🟨🟥', 'VAR进球': '⚽VAR', 'VAR红牌': '🟥VAR',
+};
+// 悬浮卡片只展示影响比分/人数的关键事件（与直播吧官网弹层一致）
+const KEY_EVENTS = new Set(['进球', '点球', '乌龙球', '红牌', '黄牌2']);
 
 const state = {
   matches: [],       // 首页解析出的赛程
@@ -127,14 +137,46 @@ async function fetchScores() {
 async function fetchDetail(match) {
   const cached = state.detailCache[match.id];
   if (cached && Date.now() - cached.time < 15000) return cached.data;
+
+  const [detail, events] = await Promise.all([
+    fetch(DETAIL_URL(match.date, match.id) + '?r=' + Math.random(), { credentials: 'omit' })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null),
+    match.type === 'football' ? fetchFootballEvents(match) : Promise.resolve(null),
+  ]);
+
+  const data = detail || events ? { ...(detail || {}), key_events: events } : null;
+  state.detailCache[match.id] = { time: Date.now(), data };
+  return data;
+}
+
+// 足球关键事件流（与直播吧官网弹层同源），按中文事件名识别，无需猜测数字码
+async function fetchFootballEvents(match) {
   try {
-    const res = await fetch(DETAIL_URL(match.date, match.id) + '?r=' + Math.random(), { credentials: 'omit' });
-    if (!res.ok) throw new Error('no detail');
-    const data = await res.json();
-    state.detailCache[match.id] = { time: Date.now(), data };
-    return data;
+    const res = await fetch(EVENT_URL(match.date, match.id) + '?r=' + Math.random(), { credentials: 'omit' });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const raw = json && json.data ? Object.values(json.data) : [];
+    const logoName = (u) => ((u || '').split('/').pop() || '').toLowerCase();
+    const leftLogo = logoName(match.leftLogo);
+    const rightLogo = logoName(match.rightLogo);
+
+    const events = [];
+    raw.forEach((e) => {
+      if (!e || !e.event_code_cn) return;
+      let cn = e.event_code_cn;
+      if (cn === '两黄牌下' || cn === '第二张黄牌') cn = '黄牌2';
+      if (cn === '乌龙') cn = '乌龙球';
+      if (!KEY_EVENTS.has(cn)) return;
+
+      const evLogo = logoName(e.team_logo);
+      let side = evLogo && evLogo === rightLogo ? 'right' : 'left';
+      // 乌龙球记在受益方（与官网展示一致）
+      if (cn === '乌龙球') side = side === 'left' ? 'right' : 'left';
+      events.push({ minute: `${e.time}'`, name: e.player_name_cn || '', cn, side });
+    });
+    return events.length ? events : null;
   } catch (e) {
-    state.detailCache[match.id] = { time: Date.now(), data: null };
     return null;
   }
 }
@@ -475,16 +517,31 @@ function ttTeam(name, logo) {
   return el;
 }
 
-// player_data: {left:[{value:"10'", player_name:"恩博洛", code:"1"}], right:[...]}
-// left/right 以主队为 home：rightishome=1 时 home 显示在右侧
 function buildEvents(m, detail) {
-  const pd = detail?.player_data;
-  if (!pd || (!pd.left?.length && !pd.right?.length)) return null;
+  // 优先：dc 事件流（中文事件名，side 已按展示左右对齐）
+  let items = null;
+  if (detail?.key_events?.length) {
+    items = detail.key_events.map((e) => ({
+      minute: e.minute,
+      text: `${EVENT_CN_ICONS[e.cn] || '·'} ${e.name}${e.cn === '乌龙球' ? '（乌龙）' : ''}`,
+      side: e.side === 'right' ? 'right-side' : 'left-side',
+    }));
+  } else {
+    // 回退：player_data（left/right 对应 home/visit，按 rightishome 换算展示侧）
+    const pd = detail?.player_data;
+    if (!pd || (!pd.left?.length && !pd.right?.length)) return null;
+    const rightIsHome = detail.rightishome === '1';
+    items = [
+      ...(pd.left || []).map((e) => ({ e, side: rightIsHome ? 'right-side' : 'left-side' })),
+      ...(pd.right || []).map((e) => ({ e, side: rightIsHome ? 'left-side' : 'right-side' })),
+    ].map(({ e, side }) => ({
+      minute: e.value || '',
+      text: `${EVENT_CODE_ICONS[e.code] || '·'} ${e.player_name || ''}`,
+      side,
+    }));
+  }
 
-  const rightIsHome = detail.rightishome === '1';
-  // player_data 的 left/right 对应 home/visit 的展示侧，与页面一致时直接使用
-  const leftEvents = pd.left || [];
-  const rightEvents = pd.right || [];
+  items.sort((a, b) => parseInt(a.minute) - parseInt(b.minute));
 
   const wrap = document.createElement('div');
   wrap.className = 'tt-events';
@@ -493,26 +550,18 @@ function buildEvents(m, detail) {
   title.textContent = '进球 / 事件';
   wrap.appendChild(title);
 
-  const addEvent = (e, side) => {
+  items.forEach((it) => {
     const el = document.createElement('div');
-    el.className = 'tt-event ' + side;
+    el.className = 'tt-event ' + it.side;
     const minute = document.createElement('span');
     minute.className = 'minute';
-    minute.textContent = e.value || '';
+    minute.textContent = it.minute;
     const name = document.createElement('span');
-    name.textContent = `${EVENT_ICONS[e.code] || '⚽'} ${e.player_name || ''}`;
+    name.textContent = it.text;
     el.appendChild(minute);
     el.appendChild(name);
-    return el;
-  };
-
-  // 合并按时间排序展示，主/客分列左右
-  const all = [
-    ...leftEvents.map((e) => ({ e, side: rightIsHome ? 'right-side' : 'left-side' })),
-    ...rightEvents.map((e) => ({ e, side: rightIsHome ? 'left-side' : 'right-side' })),
-  ];
-  all.sort((a, b) => parseInt(a.e.value) - parseInt(b.e.value));
-  all.forEach(({ e, side }) => wrap.appendChild(addEvent(e, side)));
+    wrap.appendChild(el);
+  });
   return wrap;
 }
 

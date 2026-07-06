@@ -6,6 +6,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8734", "--directory", "/opt/www/sportsLive"],
       "port": 8734
+    },
+    {
+      "name": "aggregation",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8735", "--directory", "/opt/www/test/outputs/batch_goods_color_aggregation"],
+      "port": 8735
     }
   ]
 }

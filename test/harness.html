@@ -22,10 +22,10 @@
       const u = String(url);
       if (u.startsWith('https://www.zhibo8.com/')) return realFetch('fixtures/home.html');
       if (u.includes('bifen4pc2.qiumibao.com/json/list.htm')) return realFetch('fixtures/list.json');
-      if (u.includes('bifen4pc.qiumibao.com/json/')) {
-        if (u.includes('/1867467.htm')) return realFetch('fixtures/detail_1867467.json');
-        return Promise.resolve(new Response('', { status: 404 }));
-      }
+      let m = u.match(/bifen4pc\.qiumibao\.com\/json\/[0-9-]+\/(\d+)\.htm/);
+      if (m) return realFetch('fixtures/detail_' + m[1] + '.json');
+      m = u.match(/dc4pc\.qiumibao\.com\/dc\/matchs\/data\/[0-9-]+\/match_event_(\d+)\.htm/);
+      if (m) return realFetch('fixtures/event_' + m[1] + '.json');
       return realFetch(url);
     };
   </script>
