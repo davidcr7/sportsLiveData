@@ -190,6 +190,46 @@ body {
   filter: none;
 }
 
+/* ---------- date tabs ---------- */
+.date-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 10px;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.date-tabs::-webkit-scrollbar { display: none; }
+
+.date-tab {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink-2);
+  font-size: 12px;
+  letter-spacing: .05em;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: var(--shadow-sm);
+  transition: all .18s;
+}
+
+.date-tab:hover {
+  border-color: var(--gold-2);
+  color: var(--gold);
+}
+
+.date-tab.active {
+  background: linear-gradient(135deg, #fdfaf4, #f6eeda);
+  border-color: var(--gold);
+  color: #8a6a32;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(176, 141, 79, .18);
+}
+
 /* ---------- match list ---------- */
 .list {
   flex: 1;

@@ -36,12 +36,14 @@ const state = {
   matches: [],       // 首页解析出的赛程
   scores: {},        // id -> 实时比分
   activeTab: 'all',
+  activeDate: 'all', // 'all' 或 'YYYY-MM-DD'
   pinnedTab: null,
   detailCache: {},   // id -> {time, data}
 };
 
 const $list = document.getElementById('list');
 const $tabs = document.getElementById('tabs');
+const $dateTabs = document.getElementById('dateTabs');
 const $tooltip = document.getElementById('tooltip');
 const $updateTime = document.getElementById('updateTime');
 const $refreshBtn = document.getElementById('refreshBtn');
@@ -213,6 +215,39 @@ function renderTabs() {
   });
 }
 
+function dateLabel(date) {
+  const p = (n) => String(n).padStart(2, '0');
+  const fmt = (d) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  const names = {};
+  names[fmt(new Date())] = '今天';
+  names[fmt(new Date(Date.now() + 86400000))] = '明天';
+  names[fmt(new Date(Date.now() + 2 * 86400000))] = '后天';
+  const md = date.slice(5);
+  return names[date] ? `${names[date]} ${md}` : md;
+}
+
+function renderDateTabs() {
+  const dates = [...new Set(state.matches.map((m) => m.date))].sort();
+  // 当前选中日期已不在数据中（跨天后），回到全部
+  if (state.activeDate !== 'all' && !dates.includes(state.activeDate)) {
+    state.activeDate = 'all';
+  }
+  $dateTabs.innerHTML = '';
+  const mk = (key, label) => {
+    const el = document.createElement('div');
+    el.className = 'date-tab' + (state.activeDate === key ? ' active' : '');
+    el.textContent = label;
+    el.addEventListener('click', () => {
+      state.activeDate = key;
+      renderDateTabs();
+      renderList();
+    });
+    $dateTabs.appendChild(el);
+  };
+  mk('all', '全部日期');
+  dates.forEach((d) => mk(d, dateLabel(d)));
+}
+
 function togglePin(key) {
   state.pinnedTab = state.pinnedTab === key ? null : key;
   chrome.storage.local.set({ pinnedTab: state.pinnedTab });
@@ -260,7 +295,9 @@ function displayScore(m) {
 }
 
 function renderList() {
-  const items = state.matches.filter((m) => matchInTab(m, state.activeTab));
+  const items = state.matches.filter((m) =>
+    matchInTab(m, state.activeTab) &&
+    (state.activeDate === 'all' || m.date === state.activeDate));
   $list.innerHTML = '';
 
   if (!items.length) {
@@ -274,7 +311,8 @@ function renderList() {
   let lastDate = '';
   const today = new Date().toISOString().slice(0, 10);
   items.forEach((m) => {
-    if (m.date !== lastDate) {
+    // 选定具体日期时不再需要日期分隔行
+    if (state.activeDate === 'all' && m.date !== lastDate) {
       lastDate = m.date;
       const sep = document.createElement('div');
       sep.className = 'date-sep';
@@ -571,6 +609,7 @@ async function refreshAll(manual = false) {
   if (manual) $refreshBtn.classList.add('spinning');
   try {
     await Promise.all([fetchSchedule(), fetchScores()]);
+    renderDateTabs();
     renderList();
   } catch (e) {
     $list.innerHTML = '';
